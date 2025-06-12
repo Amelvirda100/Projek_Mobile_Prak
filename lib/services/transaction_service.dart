@@ -13,7 +13,8 @@ class TransactionAPI {
     return jsonDecode(response.body);
   }
 
-   static Future<Map<String, dynamic>> getTransactionById(String token, int id) async {
+  static Future<Map<String, dynamic>> getTransactionById(String token,
+      int id) async {
     final response = await http.get(
       Uri.parse('$url/transactions/$id'),
       headers: {
@@ -30,10 +31,8 @@ class TransactionAPI {
     }
   }
 
-  static Future<Map<String, dynamic>> addTransaction(
-    Transaction transaction,
-    String token,
-  ) async {
+  static Future<Map<String, dynamic>> addTransaction(Transaction transaction,
+      String token,) async {
     final response = await http.post(
       Uri.parse("$url/transactions"),
       headers: {
@@ -52,7 +51,17 @@ class TransactionAPI {
         "location_id": transaction.locationName,
       }),
     );
-    return jsonDecode(response.body);
+    final responseBody = jsonDecode(response.body);
+
+    // Handle berdasarkan status code
+    if (response.statusCode == 201) {
+      return responseBody;
+    } else {
+      return {
+        'message': responseBody['message'] ??
+            'HTTP Error ${response.statusCode}'
+      };
+    }
   }
 
   static Future<Map<String, dynamic>> updateTransaction(

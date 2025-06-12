@@ -1,4 +1,3 @@
-// Tambahan: Import
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:budgetlisting/models/location_model.dart';

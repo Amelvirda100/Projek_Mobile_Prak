@@ -112,14 +112,13 @@ class _AddTransactionPageState extends State<AddTransactionPage> {
       currencyRate: _currencyRate,
       timeZone: _timeZone,
       locationName: _selectedLocation?.name,
-      locationId: _selectedLocation,
     );
 
     // Debugging: Cetak payload
     print('Payload: ${transaction.toJson()}');
     final result = await TransactionAPI.addTransaction(transaction, token);
 
-    if (result['success'] == true) {
+    if (result['message'] == 'Transaction added successfully') {
       // Kembali dengan status sukses
       Navigator.pop(context, true);
     }  else {

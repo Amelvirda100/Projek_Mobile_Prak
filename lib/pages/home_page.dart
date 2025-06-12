@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage> {
   final mainColor = const Color.fromRGBO(97, 126, 140, 1.0);
 
   final Map<String, String> currencySymbols = {
-    'USD': 'AS\$',
+    'USD': 'US\$',
     'JPY': '¥',
     'EUR': '€',
     'SGD': 'S\$',
@@ -67,7 +67,7 @@ class _HomePageState extends State<HomePage> {
 
   void _onItemTapped(int index) {
     if (index == 3) {
-      logout(context);
+      _showLogoutConfirmationDialog();
     } else {
       setState(() {
         _selectedIndex = index;
@@ -99,13 +99,10 @@ class _HomePageState extends State<HomePage> {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final token = prefs.getString('token'); // atau int jika kamu simpan sebagai int
 
-    if (token == null || token.isEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginRegisterPage()),
-      );
+    if (token == null || token.isEmpty ) {
+      _redirectToLoginWithError();
       return;
     }
 
@@ -117,11 +114,7 @@ class _HomePageState extends State<HomePage> {
             .toList();
         applyFilter();
       } else if (response['message']?.toLowerCase().contains('expired') == true) {
-        await prefs.clear();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginRegisterPage()),
-        );
+        _showTokenExpiredDialog();
       }
     } catch (e) {
       debugPrint("Gagal fetch transaksi: $e");
@@ -134,6 +127,78 @@ class _HomePageState extends State<HomePage> {
       }
     }
   }
+
+  void _showLogoutConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Konfirmasi Keluar"),
+        content: const Text("Apakah Anda yakin ingin keluar dari akun ini?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // Batal
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // Tutup dialog
+              await logout(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text("Keluar"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTokenExpiredDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Sesi Berakhir"),
+        content: const Text("Sesi Anda telah berakhir. Anda akan dialihkan ke halaman login."),
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 5), () async {
+      if (mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginRegisterPage()),
+              (route) => false,
+        );
+      }
+    });
+  }
+
+  void _redirectToLoginWithError() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text("Kesalahan Autentikasi"),
+        content: const Text("Data pengguna tidak ditemukan. Anda akan dialihkan ke halaman login."),
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 3), () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginRegisterPage()),
+              (route) => false,
+        );
+      }
+    });
+  }
+
+
 
   void applyFilter() {
     setState(() {
@@ -183,9 +248,15 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: _selectedIndex == 0
           ? AppBar(
+        elevation: 3,
         title: const Text(
           'Dashboard Keuangan',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.5,
+        color: Colors.white,
+        ),
         ),
         backgroundColor: mainColor,
         actions: [
@@ -402,7 +473,11 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text("${isIncome ? 'Pemasukan' : 'Pengeluaran'} • ${t.date}"),
-                        Text("$originalSymbol ${amount.toStringAsFixed(0)} → $symbol ${toSelected.toStringAsFixed(2)}"),
+                        Text(
+                          t.currencyCode == selectedCurrency
+                              ? "$symbol ${amount.toStringAsFixed(2)}"
+                              : "$originalSymbol ${amount.toStringAsFixed(0)} → $symbol ${toSelected.toStringAsFixed(2)}",
+                        ),
                         if (t.note != null && t.note!.isNotEmpty)
                           Text(t.note!, style: const TextStyle(fontStyle: FontStyle.italic)),
                       ],

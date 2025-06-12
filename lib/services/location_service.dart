@@ -59,6 +59,26 @@ class LocationService {
     }
   }
 
+  Future<List<Location>> searchLocations({
+    required String token,
+    required String query
+  }) async {
+    final encodedQuery = Uri.encodeComponent(query); // Encode query untuk URL
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/locations/search?q=$encodedQuery'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return (data['locations'] as List)
+          .map((json) => Location.fromJson(json))
+          .toList();
+    } else {
+      throw Exception('Gagal mencari lokasi: ${response.statusCode}');
+    }
+  }
+
   Future<Map<String, dynamic>> deleteLocation({
     required String token,
     required int id,
